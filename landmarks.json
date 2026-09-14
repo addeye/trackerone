@@ -10,16 +10,16 @@
     },
     {
       "name": "Jembatan Grindulu JLS",
-      "lat": -8.214081,
-      "lng": 111.101783,
+      "lat": -8.21474,
+      "lng": 111.103948,
       "icon": "fa-solid fa-bridge",
       "color": "#06b6d4",
       "desc": "Jembatan penghubung di jalur JLS (Jalur Lintas Selatan)"
     },
     {
       "name": "Pasar Arjowinangun",
-      "lat": -8.197929,
-      "lng": 111.116638,
+      "lat": -8.197606,
+      "lng": 111.116712,
       "icon": "fa-solid fa-store",
       "color": "#f59e0b",
       "desc": "Pasar tradisional terbesar di kota Pacitan"
@@ -27,15 +27,15 @@
     {
       "name": "Bundaran Penceng",
       "lat": -8.195399,
-      "lng": 111.107280,
+      "lng": 111.10728,
       "icon": "fa-solid fa-circle-nodes",
       "color": "#10b981",
       "desc": "Persimpangan bundaran pusat kota Pacitan"
     },
     {
       "name": "DPRD Kabupaten Pacitan",
-      "lat": -8.195060,
-      "lng": 111.105576,
+      "lat": -8.195129,
+      "lng": 111.105418,
       "icon": "fa-solid fa-landmark",
       "color": "#6366f1",
       "desc": "Kantor Dewan Perwakilan Rakyat Daerah Kabupaten Pacitan"
@@ -50,24 +50,24 @@
     },
     {
       "name": "Kantor Bupati Pacitan",
-      "lat": -8.193836,
-      "lng": 111.103986,
+      "lat": -8.192989,
+      "lng": 111.103511,
       "icon": "fa-solid fa-building-columns",
       "color": "#3b82f6",
       "desc": "Kantor pemerintahan Kabupaten Pacitan"
     },
     {
       "name": "Museum & Galeri SBY ANI",
-      "lat": -8.209197,
-      "lng": 111.093046,
+      "lat": -8.209313,
+      "lng": 111.092978,
       "icon": "fa-solid fa-museum",
       "color": "#ec4899",
       "desc": "Museum yang didedikasikan untuk Presiden ke-6 RI"
     },
     {
       "name": "Pantai Teleng Ria",
-      "lat": -8.2215041,
-      "lng": 111.0668411,
+      "lat": -8.22161,
+      "lng": 111.078408,
       "icon": "fa-solid fa-umbrella-beach",
       "color": "#f97316",
       "desc": "Pantai populer di Pacitan dengan ombak tenang"

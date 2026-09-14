@@ -5,15 +5,15 @@
       "name": "Rute Pacitan Default",
       "description": "Rute titik lokasi statis di Pacitan",
       "checkpoints": [
-        {"lat": -8.2227, "lng": 111.0989, "label": "S"},
-        {"lat": -8.2126, "lng": 111.1005, "label": "2"},
-        {"lat": -8.2065, "lng": 111.1220, "label": "3"},
-        {"lat": -8.1980, "lng": 111.1166, "label": "4"},
-        {"lat": -8.1948, "lng": 111.1048, "label": "5"},
-        {"lat": -8.1940, "lng": 111.1044, "label": "6"},
-        {"lat": -8.1961, "lng": 111.1021, "label": "7"},
-        {"lat": -8.2085, "lng": 111.0905, "label": "8"},
-        {"lat": -8.2227, "lng": 111.0988, "label": "F"}
+        { "lat": -8.2227, "lng": 111.0989, "label": "S (Start)" },
+        { "lat": -8.214464, "lng": 111.10332, "label": "2 (Checkpoint 2)" },
+        { "lat": -8.2065, "lng": 111.122, "label": "3 (Checkpoint 3)" },
+        { "lat": -8.198968, "lng": 111.116313, "label": "4 (Checkpoint 4)" },
+        { "lat": -8.1948, "lng": 111.1048, "label": "5 (Checkpoint 5)" },
+        { "lat": -8.194, "lng": 111.1044, "label": "6 (Checkpoint 6)" },
+        { "lat": -8.1961, "lng": 111.1021, "label": "7 (Checkpoint 7)" },
+        { "lat": -8.20908, "lng": 111.09309, "label": "8 (Checkpoint 8)" },
+        { "lat": -8.2227, "lng": 111.0988, "label": "F (Finish)" }
       ]
     }
   ]

@@ -1,20 +1,32 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pacitan Dynamic Route Planner</title>
-    
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow: hidden; background: #f8fafc; }
-        #map { height: 100vh; width: 100vw; z-index: 1; }
-        
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+
+        #map {
+            height: 100vh;
+            width: 100vw;
+            z-index: 1;
+        }
+
         .glass-panel {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(12px);
@@ -22,10 +34,23 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
 
         .vehicle-marker-wrapper {
             transition: transform 0.1s linear;
@@ -36,7 +61,7 @@
             height: 44px;
             background: white;
             border-radius: 50%;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
             border: 3px solid #3b82f6;
             font-size: 22px;
             z-index: 1000;
@@ -46,7 +71,7 @@
             background-color: #ef4444;
             border: 3px solid white;
             border-radius: 50%;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -54,8 +79,14 @@
             font-weight: bold;
             font-size: 12px;
         }
-        .cp-map-marker.start { background-color: #22c55e; }
-        .cp-map-marker.finish { background-color: #3b82f6; }
+
+        .cp-map-marker.start {
+            background-color: #22c55e;
+        }
+
+        .cp-map-marker.finish {
+            background-color: #3b82f6;
+        }
 
         .modal-overlay {
             background: rgba(0, 0, 0, 0.5);
@@ -69,39 +100,45 @@
 
         .leaflet-popup-content-wrapper {
             border-radius: 12px !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
         }
 
         .leaflet-marker-draggable {
             cursor: grab !important;
         }
+
         .leaflet-marker-draggable:active {
             cursor: grabbing !important;
         }
     </style>
 </head>
+
 <body class="relative text-slate-800">
 
     <div id="map"></div>
 
     <!-- Admin Login Button -->
-    <button id="btn-admin-toggle" class="absolute z-[1001] top-4 right-4 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition-colors">
+    <button id="btn-admin-toggle"
+        class="absolute z-[1001] top-4 right-4 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition-colors">
         <i class="fa-solid fa-user-shield"></i> Admin
     </button>
 
     <!-- Landmark Toggle Button -->
-    <button id="btn-landmark-toggle" class="absolute z-[1001] top-16 right-4 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition-colors border border-slate-200">
+    <button id="btn-landmark-toggle"
+        class="absolute z-[1001] top-16 right-4 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition-colors border border-slate-200">
         <i class="fa-solid fa-map-pin text-rose-500"></i> Landmark
     </button>
 
     <!-- Landmark Legend -->
-    <div id="landmark-legend" class="hidden absolute z-[1001] top-28 right-4 bg-white rounded-xl shadow-lg p-3 border border-slate-200 max-h-[60vh] overflow-y-auto custom-scrollbar">
+    <div id="landmark-legend"
+        class="hidden absolute z-[1001] top-28 right-4 bg-white rounded-xl shadow-lg p-3 border border-slate-200 max-h-[60vh] overflow-y-auto custom-scrollbar">
         <p class="text-xs font-bold text-slate-600 mb-2 uppercase tracking-wide">Landmark Pacitan</p>
         <div id="legend-list" class="flex flex-col gap-1.5"></div>
     </div>
 
     <!-- Admin Login Modal -->
-    <div id="admin-login-modal" class="hidden fixed inset-0 z-[1002] modal-overlay flex items-center justify-center p-4">
+    <div id="admin-login-modal"
+        class="hidden fixed inset-0 z-[1002] modal-overlay flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -112,20 +149,25 @@
             </div>
             <form id="admin-login-form" class="space-y-4">
                 <div>
-                    <input type="password" id="admin-password" placeholder="Password" class="w-full bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <input type="password" id="admin-password" placeholder="Password"
+                        class="w-full bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        required>
                 </div>
                 <p id="login-error" class="text-red-500 text-sm hidden">Password salah!</p>
                 <div class="flex gap-3">
-                    <button type="button" id="btn-cancel-login" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-xl font-semibold transition-colors">Batal</button>
-                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition-colors">Login</button>
+                    <button type="button" id="btn-cancel-login"
+                        class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-xl font-semibold transition-colors">Batal</button>
+                    <button type="submit"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition-colors">Login</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Main UI Panel -->
-    <div class="absolute z-[1000] bottom-0 left-0 right-0 md:top-4 md:left-4 md:bottom-auto md:w-[400px] glass-panel rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 max-h-[90vh] md:max-h-[85vh]">
-        
+    <div
+        class="absolute z-[1000] bottom-0 left-0 right-0 md:top-4 md:left-4 md:bottom-auto md:w-[400px] glass-panel rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 max-h-[90vh] md:max-h-[85vh]">
+
         <!-- Header -->
         <div class="p-5 border-b border-slate-200 shrink-0 bg-white/50 rounded-t-3xl md:rounded-t-2xl">
             <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -149,45 +191,53 @@
                 </div>
             </div>
 
-            <div class="overflow-y-auto custom-scrollbar flex-1 border border-slate-200 rounded-xl bg-slate-50/50 p-2 min-h-[150px]">
+            <div
+                class="overflow-y-auto custom-scrollbar flex-1 border border-slate-200 rounded-xl bg-slate-50/50 p-2 min-h-[150px]">
                 <ul id="view-checkpoint-list" class="flex flex-col gap-2">
                     <li class="text-center text-slate-400 text-sm py-8">Memuat rute...</li>
                 </ul>
             </div>
 
-            <button id="btn-view-play" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-bold transition-colors shadow-lg flex items-center justify-center gap-2">
+            <button id="btn-view-play"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-bold transition-colors shadow-lg flex items-center justify-center gap-2">
                 <i class="fa-solid fa-play"></i> Putar Simulasi
             </button>
         </div>
 
         <!-- ==================== PLANNING SECTION (Admin Only) ==================== -->
         <div id="planning-section" class="hidden flex-col flex-1 overflow-hidden p-5 gap-4">
-            
+
             <!-- Admin Panel -->
             <div id="admin-panel" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
                 <div class="flex items-center justify-between">
                     <h3 class="font-bold text-amber-800 flex items-center gap-2">
                         <i class="fa-solid fa-user-shield"></i> Admin Mode
                     </h3>
-                    <button id="btn-logout" class="text-xs bg-amber-200 hover:bg-amber-300 text-amber-800 px-3 py-1 rounded-lg transition-colors">Logout</button>
+                    <button id="btn-logout"
+                        class="text-xs bg-amber-200 hover:bg-amber-300 text-amber-800 px-3 py-1 rounded-lg transition-colors">Logout</button>
                 </div>
                 <div class="flex gap-2">
-                    <button id="btn-load-route" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                    <button id="btn-load-route"
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
                         <i class="fa-solid fa-download"></i> Load
                     </button>
-                    <button id="btn-save-route" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                    <button id="btn-save-route"
+                        class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
                         <i class="fa-solid fa-save"></i> Simpan
                     </button>
                 </div>
-                <button id="btn-download-json" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                <button id="btn-download-json"
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
                     <i class="fa-solid fa-file-arrow-down"></i> Download routes.json
                 </button>
-                <button id="btn-download-landmarks" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                <button id="btn-download-landmarks"
+                    class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
                     <i class="fa-solid fa-file-arrow-down"></i> Download landmarks.json
                 </button>
                 <div class="bg-white rounded-lg p-3 border border-amber-100">
                     <label class="text-xs font-semibold text-slate-600 block mb-1">Nama Rute</label>
-                    <input type="text" id="route-name" value="Rute Pacitan Default" class="w-full bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="route-name" value="Rute Pacitan Default"
+                        class="w-full bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div class="bg-amber-100 rounded-lg p-2 text-xs text-amber-800 flex items-center gap-2">
                     <i class="fa-solid fa-arrows-up-down-left-right"></i>
@@ -197,37 +247,42 @@
 
             <!-- Landmark Dropdown -->
             <div class="flex gap-2">
-                <select id="landmark-select" class="flex-1 bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none font-medium appearance-none">
+                <select id="landmark-select"
+                    class="flex-1 bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none font-medium appearance-none">
                     <option value="" disabled selected>Pilih Lokasi Landmark...</option>
                 </select>
-                <button id="btn-add-landmark" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors font-semibold shadow-md shrink-0">
+                <button id="btn-add-landmark"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors font-semibold shadow-md shrink-0">
                     <i class="fa-solid fa-plus"></i>
                 </button>
             </div>
-            
+
             <p class="text-xs text-slate-400 text-center uppercase tracking-wider font-semibold">- ATAU -</p>
-            
+
             <div class="bg-blue-50 border border-blue-100 text-blue-700 text-xs p-3 rounded-xl flex gap-3 items-start">
                 <i class="fa-solid fa-hand-pointer mt-0.5"></i>
                 <p>Klik peta untuk tambah titik. Geser marker untuk ubah posisi.</p>
             </div>
 
             <!-- Checkpoint List -->
-            <div class="overflow-y-auto custom-scrollbar flex-1 border border-slate-200 rounded-xl bg-slate-50/50 p-2 min-h-[150px]">
+            <div
+                class="overflow-y-auto custom-scrollbar flex-1 border border-slate-200 rounded-xl bg-slate-50/50 p-2 min-h-[150px]">
                 <ul id="checkpoint-list" class="flex flex-col gap-2">
                     <li class="text-center text-slate-400 text-sm py-8" id="empty-list-msg">Belum ada titik rute.</li>
                 </ul>
             </div>
 
             <!-- Generate Button -->
-            <button id="btn-generate" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 px-4 rounded-xl font-bold transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled>
+            <button id="btn-generate"
+                class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 px-4 rounded-xl font-bold transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                disabled>
                 <i class="fa-solid fa-route"></i> Buat Jalur Rute
             </button>
         </div>
 
         <!-- ==================== PLAYBACK SECTION ==================== -->
         <div id="playback-section" class="hidden flex-col p-5 gap-4">
-            
+
             <div class="grid grid-cols-2 gap-3 mb-2">
                 <div class="bg-slate-100 p-3 rounded-xl border border-slate-200">
                     <p class="text-xs text-slate-500 font-semibold mb-1">Jarak Total</p>
@@ -240,14 +295,17 @@
             </div>
 
             <div class="flex items-center gap-2">
-                <button id="btn-play" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-semibold transition-colors shadow-md flex items-center justify-center gap-2">
+                <button id="btn-play"
+                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-semibold transition-colors shadow-md flex items-center justify-center gap-2">
                     <i class="fa-solid fa-play"></i> Play
                 </button>
-                <button id="btn-reset-playback" class="bg-slate-200 hover:bg-slate-300 text-slate-700 p-3 w-12 h-12 rounded-xl transition-colors shadow-sm flex items-center justify-center">
+                <button id="btn-reset-playback"
+                    class="bg-slate-200 hover:bg-slate-300 text-slate-700 p-3 w-12 h-12 rounded-xl transition-colors shadow-sm flex items-center justify-center">
                     <i class="fa-solid fa-rotate-left"></i>
                 </button>
                 <div class="relative">
-                    <select id="speed-select" class="bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 h-12 outline-none font-medium appearance-none pr-8">
+                    <select id="speed-select"
+                        class="bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 h-12 outline-none font-medium appearance-none pr-8">
                         <option value="1">1x</option>
                         <option value="3" selected>3x</option>
                         <option value="5">5x</option>
@@ -258,18 +316,20 @@
                     </div>
                 </div>
             </div>
-            
+
             <div>
                 <div class="flex justify-between text-xs font-semibold text-slate-500 mb-1">
                     <span>Start</span>
                     <span id="progress-text">0%</span>
                 </div>
                 <div class="w-full bg-slate-200 rounded-full h-2.5">
-                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-100" style="width: 0%"></div>
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-100"
+                        style="width: 0%"></div>
                 </div>
             </div>
 
-            <button id="btn-back-view" class="w-full mt-2 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 py-2.5 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+            <button id="btn-back-view"
+                class="w-full mt-2 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 py-2.5 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
                 <i class="fa-solid fa-arrow-left"></i> Kembali
             </button>
         </div>
@@ -286,15 +346,15 @@
             id: 'route-pacitan-001',
             name: 'Rute Pacitan Default',
             checkpoints: [
-                { lat: -8.2227, lng: 111.0989, label: 'S' },
-                { lat: -8.2126, lng: 111.1005, label: '2' },
-                { lat: -8.2065, lng: 111.1220, label: '3' },
-                { lat: -8.1980, lng: 111.1166, label: '4' },
-                { lat: -8.1948, lng: 111.1048, label: '5' },
-                { lat: -8.1940, lng: 111.1044, label: '6' },
-                { lat: -8.1961, lng: 111.1021, label: '7' },
-                { lat: -8.2085, lng: 111.0905, label: '8' },
-                { lat: -8.2227, lng: 111.0988, label: 'F' }
+                { lat: -8.2227, lng: 111.0989, label: 'S (Start)' },
+                { lat: -8.2126, lng: 111.1005, label: '2 (Checkpoint 2)' },
+                { lat: -8.2065, lng: 111.1220, label: '3 (Checkpoint 3)' },
+                { lat: -8.1980, lng: 111.1166, label: '4 (Checkpoint 4)' },
+                { lat: -8.1948, lng: 111.1048, label: '5 (Checkpoint 5)' },
+                { lat: -8.1940, lng: 111.1044, label: '6 (Checkpoint 6)' },
+                { lat: -8.1961, lng: 111.1021, label: '7 (Checkpoint 7)' },
+                { lat: -8.2085, lng: 111.0905, label: '8 (Checkpoint 8)' },
+                { lat: -8.2227, lng: 111.0988, label: 'F (Finish)' }
             ]
         };
 
@@ -322,11 +382,11 @@
         let savedRoutes = [];
 
         let routePolylines = [];
-        let routeLatLngs = []; 
+        let routeLatLngs = [];
         let segmentDistances = [];
         let totalRouteDistance = 0;
         let vehicleMarker = null;
-        
+
         let currentDistance = 0;
         let isPlaying = false;
         let animationId;
@@ -520,7 +580,7 @@
             clearAllCheckpoints();
             const route = getActiveRoute();
             const frags = document.createDocumentFragment();
-            
+
             route.checkpoints.forEach((cp, i) => {
                 const id = `cp_${cpCounter++}`;
                 const marker = L.marker([cp.lat, cp.lng]).addTo(map);
@@ -537,14 +597,14 @@
             clearAllCheckpoints();
             const route = getActiveRoute();
             DOM.routeName.value = route.name;
-            
+
             route.checkpoints.forEach((cp, i) => {
                 const id = `cp_${cpCounter++}`;
                 const marker = L.marker([cp.lat, cp.lng], { draggable: true }).addTo(map);
                 const label = cp.label || `Titik ${i + 1}`;
                 marker.bindPopup(`<b>${label}</b>`);
-                
-                marker.on('dragend', function(e) {
+
+                marker.on('dragend', function (e) {
                     const pos = e.target.getLatLng();
                     const found = userCheckpoints.find(c => c.id === id);
                     if (found) {
@@ -656,7 +716,7 @@
             const jsonStr = JSON.stringify(routeData, null, 2);
             const blob = new Blob([jsonStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
             a.download = 'routes.json';
@@ -677,7 +737,7 @@
             const jsonStr = JSON.stringify(landmarkData, null, 2);
             const blob = new Blob([jsonStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
             a.download = 'landmarks.json';
@@ -703,7 +763,7 @@
             const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
             marker.bindPopup(`<b>${name}</b>`);
 
-            marker.on('dragend', function(e) {
+            marker.on('dragend', function (e) {
                 const pos = e.target.getLatLng();
                 const found = userCheckpoints.find(c => c.id === id);
                 if (found) {
@@ -746,7 +806,7 @@
         // --- RENDER LISTS ---
         function renderViewList() {
             DOM.viewCheckpointList.innerHTML = '';
-            
+
             if (userCheckpoints.length === 0) {
                 DOM.viewCheckpointList.innerHTML = '<li class="text-center text-slate-400 text-sm py-8">Tidak ada rute tersedia.</li>';
                 DOM.viewCpCount.textContent = '0 Titik';
@@ -758,7 +818,7 @@
             userCheckpoints.forEach((cp, index) => {
                 const li = document.createElement('li');
                 li.className = 'flex items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm gap-3';
-                
+
                 let badgeColor = 'bg-slate-500';
                 let badgeText = index + 1;
                 if (index === 0) { badgeColor = 'bg-green-500'; badgeText = 'S'; }
@@ -778,7 +838,7 @@
 
         function renderAdminList() {
             DOM.checkpointList.innerHTML = '';
-            
+
             if (userCheckpoints.length === 0) {
                 DOM.checkpointList.innerHTML = '<li class="text-center text-slate-400 text-sm py-8" id="empty-list-msg">Belum ada titik rute.</li>';
                 DOM.btnGenerate.disabled = true;
@@ -786,13 +846,13 @@
             }
 
             DOM.btnGenerate.disabled = (userCheckpoints.length < 2);
-            
+
             userCheckpoints.forEach((cp, index) => {
                 updateMarkerIcon(cp, index, userCheckpoints.length);
 
                 const li = document.createElement('li');
                 li.className = 'flex items-center justify-between bg-white p-3 rounded-lg border border-slate-100 shadow-sm gap-3';
-                
+
                 let badgeColor = 'bg-slate-500';
                 let badgeText = index + 1;
                 if (index === 0) { badgeColor = 'bg-green-500'; badgeText = 'S'; }
@@ -816,7 +876,7 @@
         function updateMarkerIcon(cp, index, total) {
             let extraClass = '';
             let label = index + 1;
-            
+
             if (index === 0) { extraClass = 'start'; label = 'S'; }
             else if (index === total - 1) { extraClass = 'finish'; label = 'F'; }
 
@@ -832,7 +892,7 @@
         // --- ROUTE GENERATION ---
         async function generateRoute() {
             if (userCheckpoints.length < 2) return;
-            
+
             showStatus('Sedang mencari rute jalan...', 'blue');
             DOM.btnGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
             DOM.btnGenerate.disabled = true;
@@ -850,13 +910,13 @@
 
                 const coords = data.routes[0].geometry.coordinates;
                 routeLatLngs = coords.map(c => L.latLng(c[1], c[0]));
-                
+
                 calculateRouteMetrics();
                 drawRoutePolyline();
                 initVehicleMarker();
                 switchToPlaybackMode(data.routes[0].distance);
                 hideStatus();
-                
+
                 map.fitBounds(routePolylines[0].getBounds(), { padding: [40, 40] });
 
             } catch (error) {
@@ -900,7 +960,7 @@
             totalRouteDistance = 0;
             segmentDistances = [];
             for (let i = 0; i < routeLatLngs.length - 1; i++) {
-                const dist = routeLatLngs[i].distanceTo(routeLatLngs[i+1]);
+                const dist = routeLatLngs[i].distanceTo(routeLatLngs[i + 1]);
                 segmentDistances.push(dist);
                 totalRouteDistance += dist;
             }
@@ -910,7 +970,7 @@
         function initVehicleMarker() {
             const startPos = routeLatLngs[0];
             const iconHtml = `<div id="vehicle-wrapper" class="vehicle-marker-wrapper" style="transform: rotate(0deg);">🚲</div>`;
-            
+
             const customIcon = L.divIcon({
                 html: iconHtml,
                 className: '',
@@ -923,7 +983,7 @@
 
         function togglePlay() {
             isPlaying = !isPlaying;
-            
+
             if (isPlaying) {
                 if (currentDistance >= totalRouteDistance) resetPlayback(false);
                 DOM.btnPlay.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
@@ -943,14 +1003,14 @@
             isPlaying = false;
             cancelAnimationFrame(animationId);
             currentDistance = 0;
-            
+
             DOM.btnPlay.innerHTML = '<i class="fa-solid fa-play"></i> Play';
             DOM.btnPlay.classList.replace('bg-amber-500', 'bg-blue-600');
             DOM.btnPlay.classList.replace('hover:bg-amber-600', 'hover:bg-blue-700');
-            
+
             if (routeLatLngs.length > 0) {
                 updateVehiclePositionAndUI(0);
-                if(autoPan) map.panTo(routeLatLngs[0], {animate: true, duration: 1});
+                if (autoPan) map.panTo(routeLatLngs[0], { animate: true, duration: 1 });
             }
         }
 
@@ -979,20 +1039,20 @@
 
         function updateVehiclePositionAndUI(targetDist) {
             let accumDist = 0;
-            
+
             for (let i = 0; i < segmentDistances.length; i++) {
                 if (accumDist + segmentDistances[i] >= targetDist || i === segmentDistances.length - 1) {
-                    
+
                     const leftDist = targetDist - accumDist;
                     const segLen = segmentDistances[i];
                     const ratio = segLen === 0 ? 0 : leftDist / segLen;
-                    
+
                     const p1 = routeLatLngs[i];
-                    const p2 = routeLatLngs[i+1] || routeLatLngs[i];
+                    const p2 = routeLatLngs[i + 1] || routeLatLngs[i];
 
                     const lat = p1.lat + (p2.lat - p1.lat) * ratio;
                     const lng = p1.lng + (p2.lng - p1.lng) * ratio;
-                    
+
                     vehicleMarker.setLatLng([lat, lng]);
 
                     if (p1.lat !== p2.lat || p1.lng !== p2.lng) {
@@ -1022,7 +1082,7 @@
 
             const y = Math.sin(diffLngRad) * Math.cos(destLatRad);
             const x = Math.cos(startLatRad) * Math.sin(destLatRad) -
-                      Math.sin(startLatRad) * Math.cos(destLatRad) * Math.cos(diffLngRad);
+                Math.sin(startLatRad) * Math.cos(destLatRad) * Math.cos(diffLngRad);
             const bearingRad = Math.atan2(y, x);
             return (bearingRad * 180 / Math.PI + 360) % 360;
         }
@@ -1034,9 +1094,9 @@
             DOM.viewSection.classList.add('hidden');
             DOM.playbackSection.classList.remove('hidden');
             DOM.uiSubtitle.innerText = isAdmin ? "Simulasi Perjalanan Rute" : "Simulasi Perjalanan";
-            
+
             userCheckpoints.forEach(cp => {
-                if(cp.marker.getElement()) cp.marker.getElement().style.opacity = '0.6';
+                if (cp.marker.getElement()) cp.marker.getElement().style.opacity = '0.6';
             });
 
             const km = (totalDistanceMeters / 1000).toFixed(2);
@@ -1047,11 +1107,11 @@
         function switchToViewFromPlayback() {
             resetPlayback(false);
             clearRouteVisuals();
-            
+
             DOM.playbackSection.classList.add('hidden');
-            
+
             userCheckpoints.forEach(cp => {
-                if(cp.marker.getElement()) cp.marker.getElement().style.opacity = '1.0';
+                if (cp.marker.getElement()) cp.marker.getElement().style.opacity = '1.0';
             });
 
             if (isAdmin) {
@@ -1084,11 +1144,11 @@
         function setupEventListeners() {
             DOM.btnAddLandmark.addEventListener('click', addLandmarkFromDropdown);
             DOM.btnGenerate.addEventListener('click', generateRoute);
-            
+
             DOM.btnPlay.addEventListener('click', togglePlay);
             DOM.btnResetPlayback.addEventListener('click', () => resetPlayback(true));
             DOM.btnBackView.addEventListener('click', switchToViewFromPlayback);
-            
+
             DOM.speedSelect.addEventListener('change', (e) => {
                 speedMultiplier = parseFloat(e.target.value);
             });
@@ -1142,4 +1202,5 @@
         window.onload = initApp;
     </script>
 </body>
+
 </html>

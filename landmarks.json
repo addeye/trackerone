@@ -1,0 +1,76 @@
+{
+  "landmarks": [
+    {
+      "name": "Pancer Door (Pintu Utama)",
+      "lat": -8.229775,
+      "lng": 111.102572,
+      "icon": "fa-solid fa-archway",
+      "color": "#8b5cf6",
+      "desc": "Pintu masuk utama menuju kawasan pantai selatan Pacitan"
+    },
+    {
+      "name": "Jembatan Grindulu JLS",
+      "lat": -8.214081,
+      "lng": 111.101783,
+      "icon": "fa-solid fa-bridge",
+      "color": "#06b6d4",
+      "desc": "Jembatan penghubung di jalur JLS (Jalur Lintas Selatan)"
+    },
+    {
+      "name": "Pasar Arjowinangun",
+      "lat": -8.197929,
+      "lng": 111.116638,
+      "icon": "fa-solid fa-store",
+      "color": "#f59e0b",
+      "desc": "Pasar tradisional terbesar di kota Pacitan"
+    },
+    {
+      "name": "Bundaran Penceng",
+      "lat": -8.195399,
+      "lng": 111.107280,
+      "icon": "fa-solid fa-circle-nodes",
+      "color": "#10b981",
+      "desc": "Persimpangan bundaran pusat kota Pacitan"
+    },
+    {
+      "name": "DPRD Kabupaten Pacitan",
+      "lat": -8.195060,
+      "lng": 111.105576,
+      "icon": "fa-solid fa-landmark",
+      "color": "#6366f1",
+      "desc": "Kantor Dewan Perwakilan Rakyat Daerah Kabupaten Pacitan"
+    },
+    {
+      "name": "Alun-Alun Pacitan",
+      "lat": -8.194746,
+      "lng": 111.103199,
+      "icon": "fa-solid fa-tree-city",
+      "color": "#22c55e",
+      "desc": "Alun-alun pusat kota Pacitan, tempat rekreasi warga"
+    },
+    {
+      "name": "Kantor Bupati Pacitan",
+      "lat": -8.193836,
+      "lng": 111.103986,
+      "icon": "fa-solid fa-building-columns",
+      "color": "#3b82f6",
+      "desc": "Kantor pemerintahan Kabupaten Pacitan"
+    },
+    {
+      "name": "Museum & Galeri SBY ANI",
+      "lat": -8.209197,
+      "lng": 111.093046,
+      "icon": "fa-solid fa-museum",
+      "color": "#ec4899",
+      "desc": "Museum yang didedikasikan untuk Presiden ke-6 RI"
+    },
+    {
+      "name": "Pantai Teleng Ria",
+      "lat": -8.2215041,
+      "lng": 111.0668411,
+      "icon": "fa-solid fa-umbrella-beach",
+      "color": "#f97316",
+      "desc": "Pantai populer di Pacitan dengan ombak tenang"
+    }
+  ]
+}

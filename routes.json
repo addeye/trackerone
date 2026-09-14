@@ -1,0 +1,20 @@
+{
+  "routes": [
+    {
+      "id": "route-pacitan-001",
+      "name": "Rute Pacitan Default",
+      "description": "Rute titik lokasi statis di Pacitan",
+      "checkpoints": [
+        {"lat": -8.2227, "lng": 111.0989, "label": "S"},
+        {"lat": -8.2126, "lng": 111.1005, "label": "2"},
+        {"lat": -8.2065, "lng": 111.1220, "label": "3"},
+        {"lat": -8.1980, "lng": 111.1166, "label": "4"},
+        {"lat": -8.1948, "lng": 111.1048, "label": "5"},
+        {"lat": -8.1940, "lng": 111.1044, "label": "6"},
+        {"lat": -8.1961, "lng": 111.1021, "label": "7"},
+        {"lat": -8.2085, "lng": 111.0905, "label": "8"},
+        {"lat": -8.2227, "lng": 111.0988, "label": "F"}
+      ]
+    }
+  ]
+}

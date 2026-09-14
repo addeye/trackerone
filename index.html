@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pacitan Dynamic Route Planner</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; overflow: hidden; background: #f8fafc; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .vehicle-marker-wrapper {
+            transition: transform 0.1s linear;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+            border: 3px solid #3b82f6;
+            font-size: 22px;
+            z-index: 1000;
+        }
+
+        .cp-map-marker {
+            background-color: #ef4444;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .cp-map-marker.start { background-color: #22c55e; }
+        .cp-map-marker.finish { background-color: #3b82f6; }
+
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .landmark-marker {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15) !important;
+        }
+
+        .leaflet-marker-draggable {
+            cursor: grab !important;
+        }
+        .leaflet-marker-draggable:active {
+            cursor: grabbing !important;
+        }
+    </style>
+</head>
+<body class="relative text-slate-800">
+
+    <div id="map"></div>
+
+    <!-- Admin Login Button -->
+    <button id="btn-admin-toggle" class="absolute z-[1001] top-4 right-4 bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition-colors">
+        <i class="fa-solid fa-user-shield"></i> Admin
+    </button>
+
+    <!-- Landmark Toggle Button -->
+    <button id="btn-landmark-toggle" class="absolute z-[1001] top-16 right-4 bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 transition-colors border border-slate-200">
+        <i class="fa-solid fa-map-pin text-rose-500"></i> Landmark
+    </button>
+
+    <!-- Landmark Legend -->
+    <div id="landmark-legend" class="hidden absolute z-[1001] top-28 right-4 bg-white rounded-xl shadow-lg p-3 border border-slate-200 max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <p class="text-xs font-bold text-slate-600 mb-2 uppercase tracking-wide">Landmark Pacitan</p>
+        <div id="legend-list" class="flex flex-col gap-1.5"></div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-login-modal" class="hidden fixed inset-0 z-[1002] modal-overlay flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-lock text-2xl text-slate-600"></i>
+                </div>
+                <h2 class="text-xl font-bold text-slate-800">Admin Login</h2>
+                <p class="text-sm text-slate-500 mt-1">Masukkan password untuk mengedit rute</p>
+            </div>
+            <form id="admin-login-form" class="space-y-4">
+                <div>
+                    <input type="password" id="admin-password" placeholder="Password" class="w-full bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                </div>
+                <p id="login-error" class="text-red-500 text-sm hidden">Password salah!</p>
+                <div class="flex gap-3">
+                    <button type="button" id="btn-cancel-login" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 py-3 rounded-xl font-semibold transition-colors">Batal</button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition-colors">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main UI Panel -->
+    <div class="absolute z-[1000] bottom-0 left-0 right-0 md:top-4 md:left-4 md:bottom-auto md:w-[400px] glass-panel rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col transition-all duration-300 max-h-[90vh] md:max-h-[85vh]">
+        
+        <!-- Header -->
+        <div class="p-5 border-b border-slate-200 shrink-0 bg-white/50 rounded-t-3xl md:rounded-t-2xl">
+            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-map-location-dot text-blue-600"></i> Route Planner
+            </h1>
+            <p class="text-sm text-slate-500 mt-1" id="ui-subtitle">Lihat rute yang sudah dibuat</p>
+        </div>
+
+        <div id="status-message" class="hidden px-5 py-2 mx-4 mt-4 text-sm rounded-lg font-medium"></div>
+
+        <!-- ==================== VIEW MODE (Non-Admin) ==================== -->
+        <div id="view-section" class="flex flex-col flex-1 overflow-hidden p-5 gap-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-slate-100 p-3 rounded-xl border border-slate-200">
+                    <p class="text-xs text-slate-500 font-semibold mb-1">Total Checkpoints</p>
+                    <p class="text-lg font-bold text-slate-800" id="view-cp-count">0 Titik</p>
+                </div>
+                <div class="bg-slate-100 p-3 rounded-xl border border-slate-200">
+                    <p class="text-xs text-slate-500 font-semibold mb-1">Status</p>
+                    <p class="text-lg font-bold text-green-600" id="view-status">Aktif</p>
+                </div>
+            </div>
+
+            <div class="overflow-y-auto custom-scrollbar flex-1 border border-slate-200 rounded-xl bg-slate-50/50 p-2 min-h-[150px]">
+                <ul id="view-checkpoint-list" class="flex flex-col gap-2">
+                    <li class="text-center text-slate-400 text-sm py-8">Memuat rute...</li>
+                </ul>
+            </div>
+
+            <button id="btn-view-play" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-bold transition-colors shadow-lg flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play"></i> Putar Simulasi
+            </button>
+        </div>
+
+        <!-- ==================== PLANNING SECTION (Admin Only) ==================== -->
+        <div id="planning-section" class="hidden flex-col flex-1 overflow-hidden p-5 gap-4">
+            
+            <!-- Admin Panel -->
+            <div id="admin-panel" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-amber-800 flex items-center gap-2">
+                        <i class="fa-solid fa-user-shield"></i> Admin Mode
+                    </h3>
+                    <button id="btn-logout" class="text-xs bg-amber-200 hover:bg-amber-300 text-amber-800 px-3 py-1 rounded-lg transition-colors">Logout</button>
+                </div>
+                <div class="flex gap-2">
+                    <button id="btn-load-route" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> Load
+                    </button>
+                    <button id="btn-save-route" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-save"></i> Simpan
+                    </button>
+                </div>
+                <button id="btn-download-json" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-arrow-down"></i> Download routes.json
+                </button>
+                <button id="btn-download-landmarks" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 px-3 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-arrow-down"></i> Download landmarks.json
+                </button>
+                <div class="bg-white rounded-lg p-3 border border-amber-100">
+                    <label class="text-xs font-semibold text-slate-600 block mb-1">Nama Rute</label>
+                    <input type="text" id="route-name" value="Rute Pacitan Default" class="w-full bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-lg p-2 outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="bg-amber-100 rounded-lg p-2 text-xs text-amber-800 flex items-center gap-2">
+                    <i class="fa-solid fa-arrows-up-down-left-right"></i>
+                    <span>Geser marker di peta untuk ubah posisi titik</span>
+                </div>
+            </div>
+
+            <!-- Landmark Dropdown -->
+            <div class="flex gap-2">
+                <select id="landmark-select" class="flex-1 bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-2.5 outline-none font-medium appearance-none">
+                    <option value="" disabled selected>Pilih Lokasi Landmark...</option>
+                </select>
+                <button id="btn-add-landmark" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors font-semibold shadow-md shrink-0">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-400 text-center uppercase tracking-wider font-semibold">- ATAU -</p>
+            
+            <div class="bg-blue-50 border border-blue-100 text-blue-700 text-xs p-3 rounded-xl flex gap-3 items-start">
+                <i class="fa-solid fa-hand-pointer mt-0.5"></i>
+                <p>Klik peta untuk tambah titik. Geser marker untuk ubah posisi.</p>
+            </div>
+
+            <!-- Checkpoint List -->
+            <div class="overflow-y-auto custom-scrollbar flex-1 border border-slate-200 rounded-xl bg-slate-50/50 p-2 min-h-[150px]">
+                <ul id="checkpoint-list" class="flex flex-col gap-2">
+                    <li class="text-center text-slate-400 text-sm py-8" id="empty-list-msg">Belum ada titik rute.</li>
+                </ul>
+            </div>
+
+            <!-- Generate Button -->
+            <button id="btn-generate" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 px-4 rounded-xl font-bold transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                <i class="fa-solid fa-route"></i> Buat Jalur Rute
+            </button>
+        </div>
+
+        <!-- ==================== PLAYBACK SECTION ==================== -->
+        <div id="playback-section" class="hidden flex-col p-5 gap-4">
+            
+            <div class="grid grid-cols-2 gap-3 mb-2">
+                <div class="bg-slate-100 p-3 rounded-xl border border-slate-200">
+                    <p class="text-xs text-slate-500 font-semibold mb-1">Jarak Total</p>
+                    <p class="text-lg font-bold text-slate-800" id="info-distance">0 km</p>
+                </div>
+                <div class="bg-slate-100 p-3 rounded-xl border border-slate-200">
+                    <p class="text-xs text-slate-500 font-semibold mb-1">Checkpoint</p>
+                    <p class="text-lg font-bold text-slate-800" id="info-cp-count">0 Titik</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button id="btn-play" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl font-semibold transition-colors shadow-md flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i> Play
+                </button>
+                <button id="btn-reset-playback" class="bg-slate-200 hover:bg-slate-300 text-slate-700 p-3 w-12 h-12 rounded-xl transition-colors shadow-sm flex items-center justify-center">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+                <div class="relative">
+                    <select id="speed-select" class="bg-slate-100 border border-slate-300 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 h-12 outline-none font-medium appearance-none pr-8">
+                        <option value="1">1x</option>
+                        <option value="3" selected>3x</option>
+                        <option value="5">5x</option>
+                        <option value="8">8x</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                        <i class="fa-solid fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <div class="flex justify-between text-xs font-semibold text-slate-500 mb-1">
+                    <span>Start</span>
+                    <span id="progress-text">0%</span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-2.5">
+                    <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-100" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <button id="btn-back-view" class="w-full mt-2 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-600 py-2.5 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-arrow-left"></i> Kembali
+            </button>
+        </div>
+
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const ADMIN_PASSWORD = 'Sentana2025@';
+        const STORAGE_KEY = 'trackerone_routes';
+
+        // Fallback data jika JSON gagal dimuat
+        const FALLBACK_ROUTE = {
+            id: 'route-pacitan-001',
+            name: 'Rute Pacitan Default',
+            checkpoints: [
+                { lat: -8.2227, lng: 111.0989, label: 'S' },
+                { lat: -8.2126, lng: 111.1005, label: '2' },
+                { lat: -8.2065, lng: 111.1220, label: '3' },
+                { lat: -8.1980, lng: 111.1166, label: '4' },
+                { lat: -8.1948, lng: 111.1048, label: '5' },
+                { lat: -8.1940, lng: 111.1044, label: '6' },
+                { lat: -8.1961, lng: 111.1021, label: '7' },
+                { lat: -8.2085, lng: 111.0905, label: '8' },
+                { lat: -8.2227, lng: 111.0988, label: 'F' }
+            ]
+        };
+
+        const FALLBACK_LANDMARKS = [
+            { name: "Pancer Door (Pintu Utama)", lat: -8.229775, lng: 111.102572, icon: "fa-solid fa-archway", color: "#8b5cf6", desc: "Pintu masuk utama menuju kawasan pantai selatan Pacitan" },
+            { name: "Jembatan Grindulu JLS", lat: -8.214081, lng: 111.101783, icon: "fa-solid fa-bridge", color: "#06b6d4", desc: "Jembatan penghubung di jalur JLS" },
+            { name: "Pasar Arjowinangun", lat: -8.197929, lng: 111.116638, icon: "fa-solid fa-store", color: "#f59e0b", desc: "Pasar tradisional terbesar di kota Pacitan" },
+            { name: "Bundaran Penceng", lat: -8.195399, lng: 111.107280, icon: "fa-solid fa-circle-nodes", color: "#10b981", desc: "Persimpangan bundaran pusat kota Pacitan" },
+            { name: "DPRD Kabupaten Pacitan", lat: -8.195060, lng: 111.105576, icon: "fa-solid fa-landmark", color: "#6366f1", desc: "Kantor DPRD Kabupaten Pacitan" },
+            { name: "Alun-Alun Pacitan", lat: -8.194746, lng: 111.103199, icon: "fa-solid fa-tree-city", color: "#22c55e", desc: "Alun-alun pusat kota Pacitan" },
+            { name: "Kantor Bupati Pacitan", lat: -8.193836, lng: 111.103986, icon: "fa-solid fa-building-columns", color: "#3b82f6", desc: "Kantor pemerintahan Kabupaten Pacitan" },
+            { name: "Museum & Galeri SBY ANI", lat: -8.209197, lng: 111.093046, icon: "fa-solid fa-museum", color: "#ec4899", desc: "Museum Presiden ke-6 RI" },
+            { name: "Pantai Teleng Ria", lat: -8.2215041, lng: 111.0668411, icon: "fa-solid fa-umbrella-beach", color: "#f97316", desc: "Pantai populer di Pacitan" }
+        ];
+
+        // Data yang akan dimuat dari JSON
+        let DEFAULT_ROUTE = FALLBACK_ROUTE;
+        let PREDEFINED_LANDMARKS = FALLBACK_LANDMARKS;
+
+        let map;
+        let userCheckpoints = [];
+        let cpCounter = 0;
+        let isPlanningMode = false;
+        let isAdmin = false;
+        let savedRoutes = [];
+
+        let routePolylines = [];
+        let routeLatLngs = []; 
+        let segmentDistances = [];
+        let totalRouteDistance = 0;
+        let vehicleMarker = null;
+        
+        let currentDistance = 0;
+        let isPlaying = false;
+        let animationId;
+        let lastTimestamp;
+        let baseSpeedMps = 60;
+        let speedMultiplier = 3;
+
+        const DOM = {
+            landmarkSelect: document.getElementById('landmark-select'),
+            btnAddLandmark: document.getElementById('btn-add-landmark'),
+            checkpointList: document.getElementById('checkpoint-list'),
+            emptyListMsg: document.getElementById('empty-list-msg'),
+            btnGenerate: document.getElementById('btn-generate'),
+            viewSection: document.getElementById('view-section'),
+            viewCheckpointList: document.getElementById('view-checkpoint-list'),
+            viewCpCount: document.getElementById('view-cp-count'),
+            btnViewPlay: document.getElementById('btn-view-play'),
+            planningSection: document.getElementById('planning-section'),
+            playbackSection: document.getElementById('playback-section'),
+            statusMessage: document.getElementById('status-message'),
+            uiSubtitle: document.getElementById('ui-subtitle'),
+            btnPlay: document.getElementById('btn-play'),
+            btnResetPlayback: document.getElementById('btn-reset-playback'),
+            btnBackView: document.getElementById('btn-back-view'),
+            speedSelect: document.getElementById('speed-select'),
+            progressBar: document.getElementById('progress-bar'),
+            progressText: document.getElementById('progress-text'),
+            infoDistance: document.getElementById('info-distance'),
+            infoCpCount: document.getElementById('info-cp-count'),
+            adminPanel: document.getElementById('admin-panel'),
+            btnAdminToggle: document.getElementById('btn-admin-toggle'),
+            adminLoginModal: document.getElementById('admin-login-modal'),
+            adminLoginForm: document.getElementById('admin-login-form'),
+            adminPassword: document.getElementById('admin-password'),
+            loginError: document.getElementById('login-error'),
+            btnCancelLogin: document.getElementById('btn-cancel-login'),
+            btnLogout: document.getElementById('btn-logout'),
+            btnLoadRoute: document.getElementById('btn-load-route'),
+            btnSaveRoute: document.getElementById('btn-save-route'),
+            btnDownloadJson: document.getElementById('btn-download-json'),
+            btnDownloadLandmarks: document.getElementById('btn-download-landmarks'),
+            routeName: document.getElementById('route-name'),
+            btnLandmarkToggle: document.getElementById('btn-landmark-toggle'),
+            landmarkLegend: document.getElementById('landmark-legend'),
+            legendList: document.getElementById('legend-list')
+        };
+
+        // --- FETCH JSON DATA ---
+        async function fetchJsonFile(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.warn(`Gagal memuat ${url}:`, error.message);
+                return null;
+            }
+        }
+
+        async function loadAllData() {
+            // Load landmarks
+            const landmarksData = await fetchJsonFile('landmarks.json');
+            if (landmarksData && landmarksData.landmarks) {
+                PREDEFINED_LANDMARKS = landmarksData.landmarks;
+                console.log('Landmarks dimuat dari JSON');
+            } else {
+                console.log('Menggunakan fallback landmarks');
+            }
+
+            // Load routes
+            const routesData = await fetchJsonFile('routes.json');
+            if (routesData && routesData.routes && routesData.routes.length > 0) {
+                DEFAULT_ROUTE = routesData.routes[0];
+                console.log('Routes dimuat dari JSON');
+            } else {
+                console.log('Menggunakan fallback routes');
+            }
+        }
+
+        // --- INIT ---
+        async function initApp() {
+            // Load data dari JSON files terlebih dahulu
+            await loadAllData();
+
+            map = L.map('map', { zoomControl: false }).setView([-8.212000, 111.105000], 14);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=cb1_3je5_1_1a4b38a362c1144e7751584b', {
+                attribution: '&copy; OpenStreetMap',
+                maxZoom: 19
+            }).addTo(map);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            PREDEFINED_LANDMARKS.forEach((lm, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = lm.name;
+                DOM.landmarkSelect.appendChild(opt);
+            });
+
+            addLandmarksToMap();
+
+            map.on('click', (e) => {
+                if (!isAdmin || !isPlanningMode) return;
+                addCustomCheckpoint(e.latlng.lat, e.latlng.lng);
+            });
+
+            loadSavedRoutes();
+            loadRouteInView();
+            setupEventListeners();
+        }
+
+        // --- LANDMARKS ON MAP ---
+        let landmarkMarkers = [];
+        let landmarksVisible = true;
+
+        function addLandmarksToMap() {
+            DOM.legendList.innerHTML = '';
+
+            PREDEFINED_LANDMARKS.forEach(lm => {
+                const icon = L.divIcon({
+                    className: 'landmark-marker',
+                    html: `<div style="background:${lm.color};width:28px;height:28px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;"><i class="${lm.icon}" style="color:white;font-size:12px;"></i></div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]
+                });
+
+                const marker = L.marker([lm.lat, lm.lng], { icon }).addTo(map);
+                marker.bindPopup(`
+                    <div style="min-width:180px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                            <div style="background:${lm.color};width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i class="${lm.icon}" style="color:white;font-size:10px;"></i>
+                            </div>
+                            <b style="font-size:13px;color:#1e293b;">${lm.name}</b>
+                        </div>
+                        <p style="font-size:11px;color:#64748b;margin:0;line-height:1.4;">${lm.desc}</p>
+                        <p style="font-size:10px;color:#94a3b8;margin:4px 0 0;">${lm.lat.toFixed(4)}, ${lm.lng.toFixed(4)}</p>
+                    </div>
+                `);
+                landmarkMarkers.push(marker);
+
+                const legendItem = document.createElement('div');
+                legendItem.className = 'flex items-center gap-2 py-1 px-1 rounded hover:bg-slate-100 cursor-pointer transition-colors';
+                legendItem.innerHTML = `
+                    <div style="background:${lm.color};width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${lm.icon}" style="color:white;font-size:8px;"></i>
+                    </div>
+                    <span class="text-xs text-slate-700 truncate">${lm.name}</span>
+                `;
+                legendItem.addEventListener('click', () => {
+                    map.setView([lm.lat, lm.lng], 16);
+                    marker.openPopup();
+                });
+                DOM.legendList.appendChild(legendItem);
+            });
+
+            DOM.landmarkLegend.classList.remove('hidden');
+        }
+
+        function toggleLandmarks() {
+            landmarksVisible = !landmarksVisible;
+            landmarkMarkers.forEach(m => {
+                if (landmarksVisible) {
+                    m.addTo(map);
+                } else {
+                    map.removeLayer(m);
+                }
+            });
+            DOM.landmarkLegend.classList.toggle('hidden', !landmarksVisible);
+            DOM.btnLandmarkToggle.classList.toggle('bg-white', landmarksVisible);
+            DOM.btnLandmarkToggle.classList.toggle('bg-slate-200', !landmarksVisible);
+        }
+
+        // --- STORAGE ---
+        function loadSavedRoutes() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                try { savedRoutes = JSON.parse(stored); } catch (e) { savedRoutes = []; }
+            }
+        }
+
+        function saveRoutesToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRoutes));
+        }
+
+        function getActiveRoute() {
+            return savedRoutes.length > 0 ? savedRoutes[0] : DEFAULT_ROUTE;
+        }
+
+        // --- LOAD ROUTES ---
+        function loadRouteInView() {
+            clearAllCheckpoints();
+            const route = getActiveRoute();
+            const frags = document.createDocumentFragment();
+            
+            route.checkpoints.forEach((cp, i) => {
+                const id = `cp_${cpCounter++}`;
+                const marker = L.marker([cp.lat, cp.lng]).addTo(map);
+                const label = cp.label || `Titik ${i + 1}`;
+                marker.bindPopup(`<b>${label}</b>`);
+                userCheckpoints.push({ id, name: label, lat: cp.lat, lng: cp.lng, marker });
+            });
+
+            renderViewList();
+            fitMapToCheckpoints();
+        }
+
+        function loadRouteForAdmin() {
+            clearAllCheckpoints();
+            const route = getActiveRoute();
+            DOM.routeName.value = route.name;
+            
+            route.checkpoints.forEach((cp, i) => {
+                const id = `cp_${cpCounter++}`;
+                const marker = L.marker([cp.lat, cp.lng], { draggable: true }).addTo(map);
+                const label = cp.label || `Titik ${i + 1}`;
+                marker.bindPopup(`<b>${label}</b>`);
+                
+                marker.on('dragend', function(e) {
+                    const pos = e.target.getLatLng();
+                    const found = userCheckpoints.find(c => c.id === id);
+                    if (found) {
+                        found.lat = pos.lat;
+                        found.lng = pos.lng;
+                        found.name = `Titik Kustom (${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)})`;
+                        marker.setPopupContent(`<b>${found.name}</b>`);
+                        renderAdminList();
+                    }
+                });
+
+                userCheckpoints.push({ id, name: label, lat: cp.lat, lng: cp.lng, marker });
+            });
+
+            renderAdminList();
+            fitMapToCheckpoints();
+        }
+
+        function fitMapToCheckpoints() {
+            if (userCheckpoints.length > 0) {
+                const group = new L.featureGroup(userCheckpoints.map(c => c.marker));
+                map.fitBounds(group.getBounds(), { padding: [50, 50] });
+            }
+        }
+
+        // --- ADMIN AUTH ---
+        function loginAdmin(password) {
+            if (password === ADMIN_PASSWORD) {
+                isAdmin = true;
+                DOM.adminPanel.classList.remove('hidden');
+                DOM.adminLoginModal.classList.add('hidden');
+                DOM.adminPassword.value = '';
+                DOM.loginError.classList.add('hidden');
+                switchToAdminMode();
+                showStatus('Admin mode aktif', 'green');
+                setTimeout(hideStatus, 2000);
+            } else {
+                DOM.loginError.classList.remove('hidden');
+            }
+        }
+
+        function logoutAdmin() {
+            isAdmin = false;
+            DOM.adminPanel.classList.add('hidden');
+            switchToViewMode();
+            loadRouteInView();
+            showStatus('Admin mode dinonaktifkan', 'blue');
+            setTimeout(hideStatus, 2000);
+        }
+
+        // --- VIEW MODES ---
+        function switchToAdminMode() {
+            isPlanningMode = true;
+            DOM.viewSection.classList.add('hidden');
+            DOM.playbackSection.classList.add('hidden');
+            DOM.planningSection.classList.remove('hidden');
+            DOM.uiSubtitle.innerText = "Edit rute (Admin)";
+            loadRouteForAdmin();
+        }
+
+        function switchToViewMode() {
+            isPlanningMode = false;
+            DOM.planningSection.classList.add('hidden');
+            DOM.playbackSection.classList.add('hidden');
+            DOM.viewSection.classList.remove('hidden');
+            DOM.uiSubtitle.innerText = "Lihat rute yang sudah dibuat";
+        }
+
+        // --- SAVE/LOAD ---
+        function saveCurrentRoute() {
+            const name = DOM.routeName.value.trim() || 'Rute Tanpa Nama';
+            const checkpoints = userCheckpoints.map(cp => ({
+                lat: cp.lat,
+                lng: cp.lng,
+                label: cp.name
+            }));
+
+            const existingIndex = savedRoutes.findIndex(r => r.id === 'route-pacitan-001');
+            const routeData = { id: 'route-pacitan-001', name, checkpoints };
+
+            if (existingIndex >= 0) {
+                savedRoutes[existingIndex] = routeData;
+            } else {
+                savedRoutes.push(routeData);
+            }
+
+            saveRoutesToStorage();
+            showStatus('Rute berhasil disimpan ke penyimpanan!', 'green');
+            setTimeout(hideStatus, 2000);
+        }
+
+        function downloadRoutesJson() {
+            const name = DOM.routeName.value.trim() || 'Rute Pacitan Default';
+            const checkpoints = userCheckpoints.map(cp => ({
+                lat: cp.lat,
+                lng: cp.lng,
+                label: cp.name
+            }));
+
+            const routeData = {
+                routes: [{
+                    id: 'route-pacitan-001',
+                    name: name,
+                    description: 'Rute titik lokasi statis di Pacitan',
+                    checkpoints: checkpoints
+                }]
+            };
+
+            const jsonStr = JSON.stringify(routeData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'routes.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showStatus('routes.json berhasil didownload!', 'green');
+            setTimeout(hideStatus, 2000);
+        }
+
+        function downloadLandmarksJson() {
+            const landmarkData = {
+                landmarks: PREDEFINED_LANDMARKS
+            };
+
+            const jsonStr = JSON.stringify(landmarkData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'landmarks.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showStatus('landmarks.json berhasil didownload!', 'green');
+            setTimeout(hideStatus, 2000);
+        }
+
+        function loadRouteFromStorage() {
+            loadRouteForAdmin();
+            showStatus('Rute dimuat dari penyimpanan', 'green');
+            setTimeout(hideStatus, 2000);
+        }
+
+        // --- CHECKPOINTS ---
+        function addCustomCheckpoint(lat, lng) {
+            const id = `cp_${cpCounter++}`;
+            const name = `Titik Kustom (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+            const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+            marker.bindPopup(`<b>${name}</b>`);
+
+            marker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                const found = userCheckpoints.find(c => c.id === id);
+                if (found) {
+                    found.lat = pos.lat;
+                    found.lng = pos.lng;
+                    found.name = `Titik Kustom (${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)})`;
+                    marker.setPopupContent(`<b>${found.name}</b>`);
+                    renderAdminList();
+                }
+            });
+
+            userCheckpoints.push({ id, name, lat, lng, marker });
+            renderAdminList();
+            map.panTo([lat, lng], { animate: true, duration: 0.5 });
+        }
+
+        function addLandmarkFromDropdown() {
+            const val = DOM.landmarkSelect.value;
+            if (val === "") return;
+            const lm = PREDEFINED_LANDMARKS[val];
+            addCustomCheckpoint(lm.lat, lm.lng);
+            DOM.landmarkSelect.value = "";
+        }
+
+        function removeCheckpoint(id) {
+            const index = userCheckpoints.findIndex(cp => cp.id === id);
+            if (index > -1) {
+                map.removeLayer(userCheckpoints[index].marker);
+                userCheckpoints.splice(index, 1);
+                renderAdminList();
+            }
+        }
+
+        function clearAllCheckpoints() {
+            userCheckpoints.forEach(cp => map.removeLayer(cp.marker));
+            userCheckpoints = [];
+            cpCounter = 0;
+        }
+
+        // --- RENDER LISTS ---
+        function renderViewList() {
+            DOM.viewCheckpointList.innerHTML = '';
+            
+            if (userCheckpoints.length === 0) {
+                DOM.viewCheckpointList.innerHTML = '<li class="text-center text-slate-400 text-sm py-8">Tidak ada rute tersedia.</li>';
+                DOM.viewCpCount.textContent = '0 Titik';
+                return;
+            }
+
+            DOM.viewCpCount.textContent = `${userCheckpoints.length} Titik`;
+
+            userCheckpoints.forEach((cp, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm gap-3';
+                
+                let badgeColor = 'bg-slate-500';
+                let badgeText = index + 1;
+                if (index === 0) { badgeColor = 'bg-green-500'; badgeText = 'S'; }
+                else if (index === userCheckpoints.length - 1) { badgeColor = 'bg-blue-500'; badgeText = 'F'; }
+
+                li.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-7 h-7 rounded-full ${badgeColor} text-white flex items-center justify-center font-bold text-xs shrink-0">
+                            ${badgeText}
+                        </div>
+                        <p class="text-sm font-semibold text-slate-700 truncate">${cp.name}</p>
+                    </div>
+                `;
+                DOM.viewCheckpointList.appendChild(li);
+            });
+        }
+
+        function renderAdminList() {
+            DOM.checkpointList.innerHTML = '';
+            
+            if (userCheckpoints.length === 0) {
+                DOM.checkpointList.innerHTML = '<li class="text-center text-slate-400 text-sm py-8" id="empty-list-msg">Belum ada titik rute.</li>';
+                DOM.btnGenerate.disabled = true;
+                return;
+            }
+
+            DOM.btnGenerate.disabled = (userCheckpoints.length < 2);
+            
+            userCheckpoints.forEach((cp, index) => {
+                updateMarkerIcon(cp, index, userCheckpoints.length);
+
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-white p-3 rounded-lg border border-slate-100 shadow-sm gap-3';
+                
+                let badgeColor = 'bg-slate-500';
+                let badgeText = index + 1;
+                if (index === 0) { badgeColor = 'bg-green-500'; badgeText = 'S'; }
+                else if (index === userCheckpoints.length - 1) { badgeColor = 'bg-blue-500'; badgeText = 'F'; }
+
+                li.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-7 h-7 rounded-full ${badgeColor} text-white flex items-center justify-center font-bold text-xs shrink-0">
+                            ${badgeText}
+                        </div>
+                        <p class="text-sm font-semibold text-slate-700 truncate">${cp.name}</p>
+                    </div>
+                    <button onclick="removeCheckpoint('${cp.id}')" class="text-slate-400 hover:text-red-500 transition-colors shrink-0 p-1">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                DOM.checkpointList.appendChild(li);
+            });
+        }
+
+        function updateMarkerIcon(cp, index, total) {
+            let extraClass = '';
+            let label = index + 1;
+            
+            if (index === 0) { extraClass = 'start'; label = 'S'; }
+            else if (index === total - 1) { extraClass = 'finish'; label = 'F'; }
+
+            const customIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="cp-map-marker ${extraClass}" style="width:24px; height:24px;">${label}</div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+            cp.marker.setIcon(customIcon);
+        }
+
+        // --- ROUTE GENERATION ---
+        async function generateRoute() {
+            if (userCheckpoints.length < 2) return;
+            
+            showStatus('Sedang mencari rute jalan...', 'blue');
+            DOM.btnGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+            DOM.btnGenerate.disabled = true;
+
+            try {
+                const coordsString = userCheckpoints.map(cp => `${cp.lng},${cp.lat}`).join(';');
+                const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
+
+                const response = await fetch(osrmUrl);
+                const data = await response.json();
+
+                if (data.code !== 'Ok') throw new Error("Jalur darat tidak ditemukan.");
+
+                clearRouteVisuals();
+
+                const coords = data.routes[0].geometry.coordinates;
+                routeLatLngs = coords.map(c => L.latLng(c[1], c[0]));
+                
+                calculateRouteMetrics();
+                drawRoutePolyline();
+                initVehicleMarker();
+                switchToPlaybackMode(data.routes[0].distance);
+                hideStatus();
+                
+                map.fitBounds(routePolylines[0].getBounds(), { padding: [40, 40] });
+
+            } catch (error) {
+                console.error(error);
+                showStatus(`Gagal: ${error.message}`, 'red');
+                DOM.btnGenerate.innerHTML = '<i class="fa-solid fa-route"></i> Coba Lagi';
+                DOM.btnGenerate.disabled = false;
+            }
+        }
+
+        function clearRouteVisuals() {
+            routePolylines.forEach(pl => map.removeLayer(pl));
+            routePolylines = [];
+            if (vehicleMarker) {
+                map.removeLayer(vehicleMarker);
+                vehicleMarker = null;
+            }
+        }
+
+        function drawRoutePolyline() {
+            const outline = L.polyline(routeLatLngs, {
+                color: '#1e3a8a',
+                weight: 8,
+                opacity: 0.6,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+
+            const core = L.polyline(routeLatLngs, {
+                color: '#3b82f6',
+                weight: 4,
+                opacity: 1.0,
+                lineJoin: 'round',
+                lineCap: 'round'
+            }).addTo(map);
+
+            routePolylines = [outline, core];
+        }
+
+        function calculateRouteMetrics() {
+            totalRouteDistance = 0;
+            segmentDistances = [];
+            for (let i = 0; i < routeLatLngs.length - 1; i++) {
+                const dist = routeLatLngs[i].distanceTo(routeLatLngs[i+1]);
+                segmentDistances.push(dist);
+                totalRouteDistance += dist;
+            }
+        }
+
+        // --- ANIMATION ---
+        function initVehicleMarker() {
+            const startPos = routeLatLngs[0];
+            const iconHtml = `<div id="vehicle-wrapper" class="vehicle-marker-wrapper" style="transform: rotate(0deg);">🚲</div>`;
+            
+            const customIcon = L.divIcon({
+                html: iconHtml,
+                className: '',
+                iconSize: [44, 44],
+                iconAnchor: [22, 22]
+            });
+
+            vehicleMarker = L.marker(startPos, { icon: customIcon, zIndexOffset: 1000 }).addTo(map);
+        }
+
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            
+            if (isPlaying) {
+                if (currentDistance >= totalRouteDistance) resetPlayback(false);
+                DOM.btnPlay.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+                DOM.btnPlay.classList.replace('bg-blue-600', 'bg-amber-500');
+                DOM.btnPlay.classList.replace('hover:bg-blue-700', 'hover:bg-amber-600');
+                lastTimestamp = performance.now();
+                animationId = requestAnimationFrame(animationLoop);
+            } else {
+                DOM.btnPlay.innerHTML = '<i class="fa-solid fa-play"></i> Play';
+                DOM.btnPlay.classList.replace('bg-amber-500', 'bg-blue-600');
+                DOM.btnPlay.classList.replace('hover:bg-amber-600', 'hover:bg-blue-700');
+                cancelAnimationFrame(animationId);
+            }
+        }
+
+        function resetPlayback(autoPan = true) {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            currentDistance = 0;
+            
+            DOM.btnPlay.innerHTML = '<i class="fa-solid fa-play"></i> Play';
+            DOM.btnPlay.classList.replace('bg-amber-500', 'bg-blue-600');
+            DOM.btnPlay.classList.replace('hover:bg-amber-600', 'hover:bg-blue-700');
+            
+            if (routeLatLngs.length > 0) {
+                updateVehiclePositionAndUI(0);
+                if(autoPan) map.panTo(routeLatLngs[0], {animate: true, duration: 1});
+            }
+        }
+
+        function animationLoop(timestamp) {
+            if (!isPlaying) return;
+
+            const deltaTime = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            const travelDist = baseSpeedMps * speedMultiplier * deltaTime;
+            currentDistance += travelDist;
+
+            if (currentDistance >= totalRouteDistance) {
+                currentDistance = totalRouteDistance;
+                updateVehiclePositionAndUI(currentDistance);
+                isPlaying = false;
+                DOM.btnPlay.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Ulangi';
+                DOM.btnPlay.classList.replace('bg-amber-500', 'bg-blue-600');
+                DOM.btnPlay.classList.replace('hover:bg-amber-600', 'hover:bg-blue-700');
+                return;
+            }
+
+            updateVehiclePositionAndUI(currentDistance);
+            animationId = requestAnimationFrame(animationLoop);
+        }
+
+        function updateVehiclePositionAndUI(targetDist) {
+            let accumDist = 0;
+            
+            for (let i = 0; i < segmentDistances.length; i++) {
+                if (accumDist + segmentDistances[i] >= targetDist || i === segmentDistances.length - 1) {
+                    
+                    const leftDist = targetDist - accumDist;
+                    const segLen = segmentDistances[i];
+                    const ratio = segLen === 0 ? 0 : leftDist / segLen;
+                    
+                    const p1 = routeLatLngs[i];
+                    const p2 = routeLatLngs[i+1] || routeLatLngs[i];
+
+                    const lat = p1.lat + (p2.lat - p1.lat) * ratio;
+                    const lng = p1.lng + (p2.lng - p1.lng) * ratio;
+                    
+                    vehicleMarker.setLatLng([lat, lng]);
+
+                    if (p1.lat !== p2.lat || p1.lng !== p2.lng) {
+                        const bearing = calcBearing(p1.lat, p1.lng, p2.lat, p2.lng);
+                        const wrapper = document.getElementById('vehicle-wrapper');
+                        if (wrapper) wrapper.style.transform = `rotate(${bearing}deg)`;
+                    }
+
+                    const bounds = map.getBounds();
+                    if (!bounds.contains([lat, lng])) {
+                        map.panTo([lat, lng], { animate: true, duration: 0.3 });
+                    }
+                    break;
+                }
+                accumDist += segmentDistances[i];
+            }
+
+            const percent = Math.min((targetDist / totalRouteDistance) * 100, 100);
+            DOM.progressBar.style.width = `${percent}%`;
+            DOM.progressText.innerText = `${Math.round(percent)}%`;
+        }
+
+        function calcBearing(startLat, startLng, destLat, destLng) {
+            const startLatRad = startLat * Math.PI / 180;
+            const destLatRad = destLat * Math.PI / 180;
+            const diffLngRad = (destLng - startLng) * Math.PI / 180;
+
+            const y = Math.sin(diffLngRad) * Math.cos(destLatRad);
+            const x = Math.cos(startLatRad) * Math.sin(destLatRad) -
+                      Math.sin(startLatRad) * Math.cos(destLatRad) * Math.cos(diffLngRad);
+            const bearingRad = Math.atan2(y, x);
+            return (bearingRad * 180 / Math.PI + 360) % 360;
+        }
+
+        // --- PLAYBACK MODE ---
+        function switchToPlaybackMode(totalDistanceMeters) {
+            isPlanningMode = false;
+            DOM.planningSection.classList.add('hidden');
+            DOM.viewSection.classList.add('hidden');
+            DOM.playbackSection.classList.remove('hidden');
+            DOM.uiSubtitle.innerText = isAdmin ? "Simulasi Perjalanan Rute" : "Simulasi Perjalanan";
+            
+            userCheckpoints.forEach(cp => {
+                if(cp.marker.getElement()) cp.marker.getElement().style.opacity = '0.6';
+            });
+
+            const km = (totalDistanceMeters / 1000).toFixed(2);
+            DOM.infoDistance.innerText = `${km} km`;
+            DOM.infoCpCount.innerText = `${userCheckpoints.length} Titik`;
+        }
+
+        function switchToViewFromPlayback() {
+            resetPlayback(false);
+            clearRouteVisuals();
+            
+            DOM.playbackSection.classList.add('hidden');
+            
+            userCheckpoints.forEach(cp => {
+                if(cp.marker.getElement()) cp.marker.getElement().style.opacity = '1.0';
+            });
+
+            if (isAdmin) {
+                switchToAdminMode();
+            } else {
+                DOM.viewSection.classList.remove('hidden');
+                DOM.uiSubtitle.innerText = "Lihat rute yang sudah dibuat";
+            }
+
+            fitMapToCheckpoints();
+        }
+
+        // --- STATUS ---
+        function showStatus(text, colorScheme = 'blue') {
+            const colors = {
+                blue: 'bg-blue-100 text-blue-800 border border-blue-200',
+                red: 'bg-red-100 text-red-800 border border-red-200',
+                green: 'bg-green-100 text-green-800 border border-green-200'
+            };
+            DOM.statusMessage.className = `px-5 py-3 mx-4 mt-4 text-sm rounded-xl font-semibold shadow-sm transition-all ${colors[colorScheme]}`;
+            DOM.statusMessage.innerHTML = text;
+            DOM.statusMessage.classList.remove('hidden');
+        }
+
+        function hideStatus() {
+            DOM.statusMessage.classList.add('hidden');
+        }
+
+        // --- EVENTS ---
+        function setupEventListeners() {
+            DOM.btnAddLandmark.addEventListener('click', addLandmarkFromDropdown);
+            DOM.btnGenerate.addEventListener('click', generateRoute);
+            
+            DOM.btnPlay.addEventListener('click', togglePlay);
+            DOM.btnResetPlayback.addEventListener('click', () => resetPlayback(true));
+            DOM.btnBackView.addEventListener('click', switchToViewFromPlayback);
+            
+            DOM.speedSelect.addEventListener('change', (e) => {
+                speedMultiplier = parseFloat(e.target.value);
+            });
+
+            DOM.btnViewPlay.addEventListener('click', () => {
+                if (userCheckpoints.length < 2) {
+                    showStatus('Minimal 2 titik untuk memutar simulasi', 'red');
+                    setTimeout(hideStatus, 2000);
+                    return;
+                }
+                generateRoute();
+            });
+
+            DOM.btnAdminToggle.addEventListener('click', () => {
+                if (isAdmin) {
+                    logoutAdmin();
+                } else {
+                    DOM.adminLoginModal.classList.remove('hidden');
+                    DOM.adminPassword.focus();
+                }
+            });
+
+            DOM.btnLandmarkToggle.addEventListener('click', toggleLandmarks);
+
+            DOM.adminLoginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                loginAdmin(DOM.adminPassword.value);
+            });
+
+            DOM.btnCancelLogin.addEventListener('click', () => {
+                DOM.adminLoginModal.classList.add('hidden');
+                DOM.adminPassword.value = '';
+                DOM.loginError.classList.add('hidden');
+            });
+
+            DOM.btnLogout.addEventListener('click', logoutAdmin);
+            DOM.btnLoadRoute.addEventListener('click', loadRouteFromStorage);
+            DOM.btnSaveRoute.addEventListener('click', saveCurrentRoute);
+            DOM.btnDownloadJson.addEventListener('click', downloadRoutesJson);
+            DOM.btnDownloadLandmarks.addEventListener('click', downloadLandmarksJson);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !DOM.adminLoginModal.classList.contains('hidden')) {
+                    DOM.adminLoginModal.classList.add('hidden');
+                    DOM.adminPassword.value = '';
+                    DOM.loginError.classList.add('hidden');
+                }
+            });
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
